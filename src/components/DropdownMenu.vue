@@ -1,9 +1,9 @@
 <template>
   <div class="top-menu-container" v-show="!screenSaverVisible">
-    <!-- 箭头触发器，只在靠近顶部时显示或菜单打开时一直显示 -->
+    <!-- 箭头触发器：移动端始终显示，PC端靠近顶部时显示 -->
     <div
       class="menu-trigger"
-      v-show="arrowVisible || menuVisible"
+      v-show="isMobile || arrowVisible || menuVisible"
       @click="toggleMenu"
       :class="{ active: menuVisible }"
     >
@@ -11,7 +11,7 @@
       <ArrowUp v-else theme="filled" size="24" fill="#ffffff" />
     </div>
 
-    <!-- 菜单内容（下拉动画） -->
+    <!-- 下拉菜单内容（带滑入动画） -->
     <Transition name="slide-down">
       <div v-show="menuVisible" class="menu-content cards">
         <div class="menu-left">
@@ -57,27 +57,30 @@ const props = defineProps({
 const menuVisible = ref(false);
 const arrowVisible = ref(false);
 const currentTime = ref({});
+const isMobile = ref(false); // 是否移动端（<=720px）
 let timeInterval = null;
 
-// 切换菜单显示 - 阻止事件冒泡，避免触发外部点击监听
+// 切换菜单显示
 const toggleMenu = (e) => {
   e.stopPropagation();
-  console.log('箭头被点击');
   menuVisible.value = !menuVisible.value;
 };
 
 // 点击外部关闭菜单
 const handleClickOutside = (e) => {
   if (menuVisible.value && !e.target.closest('.top-menu-container')) {
-    console.log('点击外部，关闭菜单');
     menuVisible.value = false;
   }
 };
 
-// 监听鼠标移动，靠近顶部时显示箭头
+// 监听鼠标移动，靠近顶部时显示箭头（仅PC）
 const handleMouseMove = (e) => {
-  const threshold = 50; // 距离顶部像素
-  arrowVisible.value = e.clientY <= threshold;
+  if (!isMobile.value) {
+    const threshold = 50;
+    arrowVisible.value = e.clientY <= threshold;
+  } else {
+    arrowVisible.value = false; // 移动端不用此逻辑
+  }
 };
 
 // 更新时间
@@ -85,10 +88,15 @@ const updateTime = () => {
   currentTime.value = getCurrentTime();
 };
 
-// 取前4个站点作为快捷方式
+// 检测屏幕宽度
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 720;
+};
+
+// 取前4个站点作为快捷链接
 const topLinks = computed(() => siteLinks.slice(0, 4));
 
-// 图标映射
+// 图标映射（与 Links.vue 保持一致）
 const siteIcon = {
   Blog, Cloud, CompactDisc, Compass, Book, Fire, LaptopCode,
 };
@@ -98,13 +106,15 @@ onMounted(() => {
   timeInterval = setInterval(updateTime, 1000);
   document.addEventListener('click', handleClickOutside);
   window.addEventListener('mousemove', handleMouseMove);
-  console.log('DropdownMenu 已挂载');
+  window.addEventListener('resize', checkMobile);
+  checkMobile(); // 初始化
 });
 
 onBeforeUnmount(() => {
   clearInterval(timeInterval);
   document.removeEventListener('click', handleClickOutside);
   window.removeEventListener('mousemove', handleMouseMove);
+  window.removeEventListener('resize', checkMobile);
 });
 </script>
 
@@ -142,6 +152,11 @@ onBeforeUnmount(() => {
     }
     &:active {
       transform: scale(0.95);
+    }
+
+    @media (max-width: 720px) {
+      width: 56px;
+      height: 56px;
     }
   }
 
@@ -203,17 +218,41 @@ onBeforeUnmount(() => {
       }
     }
 
-    @media (max-width: 768px) {
+    // 移动端适配
+    @media (max-width: 720px) {
       flex-direction: column;
       align-items: stretch;
-      gap: 10px;
+      padding: 16px;
+      width: 95%;
+      border-radius: 20px;
+
       .menu-left {
-        justify-content: space-around;
+        justify-content: center;
+        margin-bottom: 12px;
       }
+
       .menu-right {
-        justify-content: space-around;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+
         .time {
-          align-items: flex-start;
+          align-items: center;
+          .date {
+            font-size: 0.9rem;
+          }
+        }
+
+        .quick-links {
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 12px 8px;
+          a {
+            font-size: 1rem;
+            span {
+              margin-left: 4px;
+            }
+          }
         }
       }
     }

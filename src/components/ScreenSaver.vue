@@ -64,8 +64,8 @@ onBeforeUnmount(() => {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7); // 半透明黑色，使壁纸变暗
-    backdrop-filter: blur(5px); // 可选，增加模糊感
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
   }
 
   .content {
@@ -83,14 +83,26 @@ onBeforeUnmount(() => {
     .time {
       text-align: center;
       margin-bottom: 30px;
+
       .hour {
         font-size: 5rem;
         font-family: 'UnidreamLED', monospace;
         line-height: 1.2;
       }
+
       .date {
         font-size: 1.5rem;
         opacity: 0.8;
+      }
+
+      // 移动端适配
+      @media (max-width: 720px) {
+        .hour {
+          font-size: 3.5rem;
+        }
+        .date {
+          font-size: 1.2rem;
+        }
       }
     }
 
@@ -98,9 +110,22 @@ onBeforeUnmount(() => {
       display: flex;
       gap: 30px;
       font-size: 1.5rem;
+
       :deep(.hitokoto.mini),
       :deep(.weather.mini) {
         font-size: 1.2rem;
+      }
+
+      // 移动端适配：改为垂直排列
+      @media (max-width: 720px) {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+
+        :deep(.hitokoto.mini),
+        :deep(.weather.mini) {
+          font-size: 1rem;
+        }
       }
     }
   }
