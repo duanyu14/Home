@@ -1,25 +1,27 @@
 <template>
-  <div class="weather" v-if="weatherData.adCode.city && weatherData.weather.weather">
-    <span>{{ weatherData.adCode.city }}&nbsp;</span>
+  <div class="weather" :class="{ mini }" v-if="weatherData.adCode.city && weatherData.weather.weather">
+    <span v-if="!mini">{{ weatherData.adCode.city }}&nbsp;</span>
     <span>{{ weatherData.weather.weather }}&nbsp;</span>
     <span>{{ weatherData.weather.temperature }}℃</span>
-    <span class="sm-hidden">
-      &nbsp;{{
-        weatherData.weather.winddirection?.endsWith("风")
-          ? weatherData.weather.winddirection
-          : weatherData.weather.winddirection + "风"
-      }}&nbsp;
+    <span v-if="!mini" class="sm-hidden">
+      &nbsp;{{ weatherData.weather.winddirection }}&nbsp;{{ weatherData.weather.windpower }}级
     </span>
-    <span class="sm-hidden">{{ weatherData.weather.windpower }}&nbsp;级</span>
   </div>
-  <div class="weather" v-else>
-    <span>天气数据获取失败</span>
+  <div class="weather" :class="{ mini }" v-else>
+    <span>获取失败</span>
   </div>
 </template>
 
 <script setup>
 import { getAdcode, getWeather, getOtherWeather } from "@/api";
 import { Error } from "@icon-park/vue-next";
+
+const props = defineProps({
+  mini: {
+    type: Boolean,
+    default: false
+  }
+});
 
 // 高德开发者 Key
 const mainKey = import.meta.env.VITE_WEATHER_KEY;
@@ -112,3 +114,19 @@ onMounted(() => {
   getWeatherData();
 });
 </script>
+
+<style lang="scss" scoped>
+.weather {
+  /* 原有的样式，如果原来有就保留，如果没有可以不加 */
+  display: inline-block;
+}
+
+/* 新增的 mini 模式样式 */
+.weather.mini {
+  display: inline-block;
+  font-size: 0.9rem;
+  span {
+    white-space: nowrap;
+  }
+}
+</style>

@@ -3,9 +3,13 @@
   <Loading />
   <!-- 壁纸 -->
   <Background @loadComplete="loadComplete" />
-  <!-- 主界面 -->
+  <!-- 顶部下拉菜单 -->
+  <DropdownMenu :screenSaverVisible="screenSaverVisible" />
+  <!-- 屏保组件 -->
+  <ScreenSaver :visible="screenSaverVisible" @click="onUserActivity" />
+  <!-- 主界面（屏保时隐藏） -->
   <Transition name="fade" mode="out-in">
-    <main id="main" v-if="store.imgLoadStatus">
+    <main id="main" v-if="store.imgLoadStatus && !screenSaverVisible">
       <div class="container" v-show="!store.backgroundShow">
         <section class="all" v-show="!store.setOpenState">
           <MainLeft />
@@ -47,8 +51,13 @@ import Box from "@/views/Box/index.vue";
 import MoreSet from "@/views/MoreSet/index.vue";
 import cursorInit from "@/utils/cursor.js";
 import config from "@/../package.json";
+import DropdownMenu from "@/components/DropdownMenu.vue";
+import ScreenSaver from "@/components/ScreenSaver.vue";
 
 const store = mainStore();
+
+// 屏显状态
+const screenSaverVisible = ref(false);
 
 // 页面宽度
 const getWidth = () => {
@@ -58,11 +67,64 @@ const getWidth = () => {
 // 加载完成事件
 const loadComplete = () => {
   nextTick(() => {
-    // 欢迎提示
     helloInit();
-    // 默哀模式
     checkDays();
   });
+};
+
+// 空闲检测相关
+let idleTimer = null;
+const IDLE_TIMEOUT = 30 * 1000; // 30秒无操作触发
+
+// 重置空闲计时器
+const resetIdleTimer = () => {
+  if (idleTimer) clearTimeout(idleTimer);
+  // 如果已处于屏保状态，不再启动新计时器（直到退出）
+  if (screenSaverVisible.value) return;
+  idleTimer = setTimeout(() => {
+    // 进入屏保模式
+    screenSaverVisible.value = true;
+    // 随机切换壁纸（0-3）
+    const newType = Math.floor(Math.random() * 4).toString();
+    if (newType !== store.coverType) {
+      store.coverType = newType;
+    }
+    // 弹出提示（与欢迎提示样式一致）
+    ElMessage({
+      message: '检测到您长时间未操作，已进入屏保模式',
+      grouping: true,
+      duration: 2000
+    });
+  }, IDLE_TIMEOUT);
+};
+
+// 用户活动处理：退出屏保并重置计时器
+const onUserActivity = () => {
+  if (screenSaverVisible.value) {
+    screenSaverVisible.value = false;
+    // 退出后立即重置计时器
+    resetIdleTimer();
+  } else {
+    resetIdleTimer();
+  }
+};
+
+// 启动空闲检测
+const startIdleDetection = () => {
+  const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+  events.forEach(event => {
+    window.addEventListener(event, onUserActivity);
+  });
+  resetIdleTimer();
+};
+
+// 停止空闲检测
+const stopIdleDetection = () => {
+  const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+  events.forEach(event => {
+    window.removeEventListener(event, onUserActivity);
+  });
+  if (idleTimer) clearTimeout(idleTimer);
 };
 
 // 监听宽度变化
@@ -105,6 +167,9 @@ onMounted(() => {
   getWidth();
   window.addEventListener("resize", getWidth);
 
+  // 启动空闲检测
+  startIdleDetection();
+
   // 控制台输出
   const styleTitle1 = "font-size: 20px;font-weight: 600;color: rgb(244,167,89);";
   const styleTitle2 = "font-size:12px;color: rgb(244,167,89);";
@@ -123,6 +188,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", getWidth);
+  stopIdleDetection();
 });
 </script>
 

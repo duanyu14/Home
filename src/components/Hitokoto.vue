@@ -1,29 +1,32 @@
 <template>
   <div
-    class="hitokoto cards"
+    class="hitokoto"
+    :class="{ mini }"
     @click="updateHitokoto"
   >
-    <!-- 移除打开音乐面板的按钮和相关逻辑 -->
-    <!-- 一言内容 -->
     <Transition name="el-fade-in-linear" mode="out-in">
       <div :key="hitokotoData.text" class="content">
         <span class="text">{{ hitokotoData.text }}</span>
-        <span class="from">-「&nbsp;{{ hitokotoData.from }}&nbsp;」</span>
+        <span v-if="!mini" class="from">-「&nbsp;{{ hitokotoData.from }}&nbsp;」</span>
       </div>
     </Transition>
   </div>
 </template>
 
 <script setup>
-// 移除 MusicMenu 导入
 import { Error } from "@icon-park/vue-next";
 import { getHitokoto } from "@/api";
 import { mainStore } from "@/store";
 import debounce from "@/utils/debounce.js";
 
-const store = mainStore();
+const props = defineProps({
+  mini: {
+    type: Boolean,
+    default: false
+  }
+});
 
-// 移除 openMusicShow
+const store = mainStore();
 
 // 一言数据
 const hitokotoData = reactive({
@@ -52,7 +55,6 @@ const getHitokotoData = async () => {
 
 // 更新一言数据
 const updateHitokoto = () => {
-  // 防抖
   debounce(() => {
     getHitokotoData();
   }, 500);
@@ -69,12 +71,14 @@ onMounted(() => {
   height: 100%;
   padding: 20px;
   animation: fade 0.5s;
-  cursor: pointer; /* 添加指针样式提示可点击 */
+  cursor: pointer;
+
   .content {
     height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
+
     .text {
       font-size: 1.1rem;
       word-break: break-all;
@@ -90,6 +94,15 @@ onMounted(() => {
       align-self: flex-end;
       font-size: 1.1rem;
     }
+  }
+}
+
+/* 新增的 mini 模式样式 */
+.hitokoto.mini {
+  padding: 4px 12px;
+  .content .text {
+    font-size: 0.9rem;
+    -webkit-line-clamp: 1;
   }
 }
 </style>

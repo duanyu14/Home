@@ -26,20 +26,20 @@
 <script setup>
 import { mainStore } from "@/store";
 import { Error } from "@icon-park/vue-next";
+import { h } from "vue";
 
 const store = mainStore();
 const bgUrl = ref(null);
 const imgTimeout = ref(null);
+const localBgIndex = ref(1); // 初始值，稍后随机
 const emit = defineEmits(["loadComplete"]);
-
-// 壁纸随机数
-// 请依据文件夹内的图片个数修改 Math.random() 后面的第一个数字
-const bgRandom = Math.floor(Math.random() * 10 + 1);
 
 // 更换壁纸链接
 const changeBg = (type) => {
   if (type == 0) {
-    bgUrl.value = `/images/background${bgRandom}.jpg`;
+    // 本地壁纸：每次切换时随机一个新索引（1-10，根据实际图片数量调整）
+    localBgIndex.value = Math.floor(Math.random() * 10 + 1);
+    bgUrl.value = `/images/background${localBgIndex.value}.jpg`;
   } else if (type == 1) {
     bgUrl.value = "https://api.dujin.org/bing/1920.php";
   } else if (type == 2) {
@@ -76,7 +76,9 @@ const imgLoadError = () => {
       fill: "#efefef",
     }),
   });
-  bgUrl.value = `/images/background${bgRandom}.jpg`;
+  // 失败时强制切换回本地壁纸（随机一张）
+  store.coverType = "0";
+  changeBg("0");
 };
 
 // 监听壁纸切换
@@ -85,11 +87,12 @@ watch(
   (value) => {
     changeBg(value);
   },
+  { immediate: true } // 立即执行一次，确保初始加载
 );
 
 onMounted(() => {
-  // 加载壁纸
-  changeBg(store.coverType);
+  // 初始化时随机本地索引（已在 changeBg 中处理，但为了保险也可在此设置）
+  // 实际上 watch 的 immediate 会调用 changeBg，所以不用重复
 });
 
 onBeforeUnmount(() => {
@@ -135,7 +138,6 @@ onBeforeUnmount(() => {
     height: 100%;
     background-image: radial-gradient(rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0.5) 100%),
       radial-gradient(rgba(0, 0, 0, 0) 33%, rgba(0, 0, 0, 0.3) 166%);
-
     transition: 1.5s;
     &.hidden {
       opacity: 0;
