@@ -76,6 +76,7 @@ const loadComplete = () => {
 let idleTimer = null;
 const IDLE_TIMEOUT = 30 * 1000; // 30秒无操作触发
 let originalCoverType = null; // 保存进入屏保前的壁纸类型
+let originalBackgroundShow = false; // 保存进入屏保前的壁纸展示状态
 
 // 重置空闲计时器
 const resetIdleTimer = () => {
@@ -85,8 +86,13 @@ const resetIdleTimer = () => {
   idleTimer = setTimeout(() => {
     // 进入屏保模式
     screenSaverVisible.value = true;
-    // 保存当前壁纸类型
+    // 保存当前状态
     originalCoverType = store.coverType;
+    originalBackgroundShow = store.backgroundShow;
+    // 退出壁纸展示状态
+    if (store.backgroundShow) {
+      store.backgroundShow = false;
+    }
     // 随机切换壁纸（0-3）
     const newType = Math.floor(Math.random() * 4).toString();
     if (newType !== store.coverType) {
@@ -106,13 +112,9 @@ const onUserActivity = () => {
   if (screenSaverVisible.value) {
     screenSaverVisible.value = false;
     // 退出屏保时恢复原来的壁纸类型
-    if (originalCoverType !== null && originalCoverType !== store.coverType) {
+    if (originalCoverType !== null) {
       store.coverType = originalCoverType;
       originalCoverType = null;
-    }
-    // 退出屏保时也要退出壁纸展示
-    if (store.backgroundShow) {
-      store.backgroundShow = false;
     }
     // 退出后立即重置计时器
     resetIdleTimer();
@@ -166,8 +168,8 @@ onMounted(() => {
 
   // 鼠标中键事件（仅桌面端生效）
   window.addEventListener("mousedown", (event) => {
-    // 只在桌面端（宽度 >= 721px）响应鼠标中键
-    if (event.button == 1 && store.innerWidth >= 721) {
+    // 只在桌面端（宽度 >= 720px）响应鼠标中键
+    if (event.button == 1 && store.innerWidth >= 720) {
       store.backgroundShow = !store.backgroundShow;
       ElMessage({
         message: `已${store.backgroundShow ? "开启" : "退出"}壁纸展示状态`,
