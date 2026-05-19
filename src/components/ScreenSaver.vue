@@ -3,13 +3,18 @@
     <div v-if="visible" class="screen-saver" @click="emit('click')">
       <div class="overlay"></div>
       <div class="content">
-        <div class="time">
-          <span class="hour">{{ currentTime.hour }}:{{ currentTime.minute }}:{{ currentTime.second }}</span>
-          <span class="date">{{ currentTime.year }}-{{ currentTime.month }}-{{ currentTime.day }} {{ currentTime.weekday }}</span>
-        </div>
-        <div class="info">
-          <Hitokoto :mini="true" />
-          <Weather :mini="true" />
+        <!-- 移动端/平板端布局 -->
+        <div class="mobile-layout">
+          <div class="time">
+            <span class="hour">{{ currentTime.hour }}:{{ currentTime.minute }}:{{ currentTime.second }}</span>
+            <span class="date">{{ currentTime.year }}-{{ currentTime.month }}-{{ currentTime.day }} {{ currentTime.weekday }}</span>
+          </div>
+          <div class="hitokoto">
+            <Hitokoto :mini="true" />
+          </div>
+          <div class="weather">
+            <Weather :mini="true" />
+          </div>
         </div>
       </div>
     </div>
@@ -55,8 +60,8 @@ onBeforeUnmount(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 200; // 低于菜单（300），高于主内容
-  cursor: pointer; // 提示可点击退出
+  z-index: 200;
+  cursor: pointer;
 
   .overlay {
     position: absolute;
@@ -73,58 +78,128 @@ onBeforeUnmount(() => {
     width: 100%;
     height: 100%;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     color: white;
     text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-    pointer-events: none; // 让点击事件穿透到父级的 @click
+    pointer-events: none;
 
-    .time {
+    /* 移动端/平板端/桌面端统一布局：垂直排列 */
+    .mobile-layout {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 25px;
+      padding: 20px;
+      max-width: 90%;
       text-align: center;
-      margin-bottom: 30px;
 
-      .hour {
-        font-size: 5rem;
-        font-family: 'UnidreamLED', monospace;
-        line-height: 1.2;
-      }
+      .time {
+        text-align: center;
 
-      .date {
-        font-size: 1.5rem;
-        opacity: 0.8;
-      }
-
-      // 移动端适配
-      @media (max-width: 720px) {
         .hour {
-          font-size: 3.5rem;
+          font-size: 4rem;
+          font-family: 'UnidreamLED', monospace;
+          display: block;
+          line-height: 1.2;
         }
+
         .date {
-          font-size: 1.2rem;
+          font-size: 1.3rem;
+          opacity: 0.8;
+          margin-top: 10px;
+        }
+      }
+
+      .hitokoto {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        max-width: 600px;
+      }
+
+      .weather {
+        font-size: 1.2rem;
+      }
+    }
+  }
+
+  /* 平板端适配（721px - 1024px） */
+  @media (min-width: 721px) and (max-width: 1024px) {
+    .content {
+      .mobile-layout {
+        gap: 22px;
+
+        .time {
+          .hour {
+            font-size: 3.8rem;
+          }
+
+          .date {
+            font-size: 1.2rem;
+          }
+        }
+
+        .hitokoto {
+          font-size: 1.15rem;
+        }
+
+        .weather {
+          font-size: 1.15rem;
         }
       }
     }
+  }
 
-    .info {
-      display: flex;
-      gap: 30px;
-      font-size: 1.5rem;
+  /* 移动端适配（<= 720px） */
+  @media (max-width: 720px) {
+    .content {
+      .mobile-layout {
+        gap: 18px;
 
-      :deep(.hitokoto.mini),
-      :deep(.weather.mini) {
-        font-size: 1.2rem;
-      }
+        .time {
+          .hour {
+            font-size: 3rem;
+          }
 
-      // 移动端适配：改为垂直排列
-      @media (max-width: 720px) {
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
+          .date {
+            font-size: 1rem;
+          }
+        }
 
-        :deep(.hitokoto.mini),
-        :deep(.weather.mini) {
+        .hitokoto {
           font-size: 1rem;
+          max-width: 90%;
+        }
+
+        .weather {
+          font-size: 1rem;
+        }
+      }
+    }
+  }
+
+  /* 小屏幕手机（<= 390px） */
+  @media (max-width: 390px) {
+    .content {
+      .mobile-layout {
+        gap: 15px;
+
+        .time {
+          .hour {
+            font-size: 2.5rem;
+          }
+
+          .date {
+            font-size: 0.9rem;
+          }
+        }
+
+        .hitokoto {
+          font-size: 0.95rem;
+        }
+
+        .weather {
+          font-size: 0.95rem;
         }
       }
     }

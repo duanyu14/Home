@@ -75,6 +75,7 @@ const loadComplete = () => {
 // 空闲检测相关
 let idleTimer = null;
 const IDLE_TIMEOUT = 30 * 1000; // 30秒无操作触发
+let originalCoverType = null; // 保存进入屏保前的壁纸类型
 
 // 重置空闲计时器
 const resetIdleTimer = () => {
@@ -84,6 +85,8 @@ const resetIdleTimer = () => {
   idleTimer = setTimeout(() => {
     // 进入屏保模式
     screenSaverVisible.value = true;
+    // 保存当前壁纸类型
+    originalCoverType = store.coverType;
     // 随机切换壁纸（0-3）
     const newType = Math.floor(Math.random() * 4).toString();
     if (newType !== store.coverType) {
@@ -102,6 +105,15 @@ const resetIdleTimer = () => {
 const onUserActivity = () => {
   if (screenSaverVisible.value) {
     screenSaverVisible.value = false;
+    // 退出屏保时恢复原来的壁纸类型
+    if (originalCoverType !== null && originalCoverType !== store.coverType) {
+      store.coverType = originalCoverType;
+      originalCoverType = null;
+    }
+    // 退出屏保时也要退出壁纸展示
+    if (store.backgroundShow) {
+      store.backgroundShow = false;
+    }
     // 退出后立即重置计时器
     resetIdleTimer();
   } else {
@@ -152,14 +164,37 @@ onMounted(() => {
     return false;
   };
 
-  // 鼠标中键事件
+  // 鼠标中键事件（仅桌面端生效）
   window.addEventListener("mousedown", (event) => {
-    if (event.button == 1) {
+    // 只在桌面端（宽度 >= 721px）响应鼠标中键
+    if (event.button == 1 && store.innerWidth >= 721) {
       store.backgroundShow = !store.backgroundShow;
       ElMessage({
         message: `已${store.backgroundShow ? "开启" : "退出"}壁纸展示状态`,
         grouping: true,
       });
+    }
+  });
+
+  // 键盘快捷键：Ctrl+Shift+S 切换屏保模式（用于调试）
+  window.addEventListener("keydown", (event) => {
+    console.log('按键测试:', event.ctrlKey, event.shiftKey, event.key);
+    if (event.ctrlKey && event.shiftKey && event.key === "S") {
+      event.preventDefault();
+      console.log('屏保快捷键触发！');
+      screenSaverVisible.value = !screenSaverVisible.value;
+      if (screenSaverVisible.value) {
+        ElMessage({
+          message: "已进入屏保模式（调试）",
+          grouping: true,
+        });
+      } else {
+        resetIdleTimer();
+        ElMessage({
+          message: "已退出屏保模式（调试）",
+          grouping: true,
+        });
+      }
     }
   });
 

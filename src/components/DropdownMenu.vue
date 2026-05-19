@@ -14,15 +14,18 @@
     <!-- 覆盖层菜单（全屏） -->
     <Transition name="slide-down">
       <div v-show="menuVisible" class="menu-overlay" @click.self="closeMenu">
-        <div class="menu-content cards">
-          <div class="menu-left">
-            <Hitokoto :mini="true" />
-            <Weather :mini="true" />
-          </div>
-          <div class="menu-right">
-            <div class="time">
+        <div class="menu-content cards" @click.stop>
+          <!-- 移动端/平板端布局 -->
+          <div class="menu-mobile-layout">
+            <div class="mobile-time">
               <span class="hour">{{ currentTime.hour }}:{{ currentTime.minute }}:{{ currentTime.second }}</span>
               <span class="date">{{ currentTime.year }}-{{ currentTime.month }}-{{ currentTime.day }} {{ currentTime.weekday }}</span>
+            </div>
+            <div class="mobile-hitokoto">
+              <Hitokoto :mini="true" />
+            </div>
+            <div class="mobile-weather">
+              <Weather :mini="true" />
             </div>
             <div class="quick-links">
               <a
@@ -276,30 +279,120 @@ onBeforeUnmount(() => {
         }
       }
 
-      /* 移动端适配 */
-      @media (max-width: 720px) {
+      /* 移动端/平板端布局 */
+      .menu-mobile-layout {
+        width: 100%;
+        display: flex;
         flex-direction: column;
-        padding: 30px 20px;
-        gap: 30px;
+        align-items: center;
+        gap: 20px;
 
-        .menu-left {
-          width: 100%;
+        .mobile-time {
+          text-align: center;
+          font-family: 'UnidreamLED', monospace;
+
+          .hour {
+            font-size: 2.5rem;
+            display: block;
+          }
+
+          .date {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin-top: 5px;
+          }
         }
 
-        .menu-right {
-          width: 100%;
-          align-items: center;
+        .mobile-hitokoto {
+          text-align: center;
+          font-size: 1rem;
+          opacity: 0.9;
+        }
 
-          .time {
-            text-align: center;
+        .mobile-weather {
+          text-align: center;
+          font-size: 1rem;
+        }
 
+        .quick-links {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          justify-content: center;
+          margin-top: 10px;
+
+          a {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            transition: 0.2s;
+
+            &:hover {
+              background: rgba(255, 255, 255, 0.2);
+              transform: scale(1.05);
+            }
+
+            .i-icon {
+              display: flex;
+            }
+          }
+        }
+      }
+
+      /* 移动端适配（<= 720px） */
+      @media (max-width: 720px) {
+        padding: 25px 15px;
+
+        .menu-mobile-layout {
+          gap: 15px;
+
+          .mobile-time {
             .hour {
-              font-size: 1.8rem;
+              font-size: 2rem;
+            }
+
+            .date {
+              font-size: 0.9rem;
             }
           }
 
-          .quick-links {
-            justify-content: center;
+          .mobile-hitokoto {
+            font-size: 0.95rem;
+          }
+
+          .mobile-weather {
+            font-size: 0.95rem;
+          }
+        }
+      }
+
+      /* 平板端适配（721px - 1024px） */
+      @media (min-width: 721px) and (max-width: 1024px) {
+        .menu-mobile-layout {
+          gap: 18px;
+
+          .mobile-time {
+            .hour {
+              font-size: 2.3rem;
+            }
+
+            .date {
+              font-size: 0.95rem;
+            }
+          }
+
+          .mobile-hitokoto {
+            font-size: 1rem;
+          }
+
+          .mobile-weather {
+            font-size: 1rem;
           }
         }
       }

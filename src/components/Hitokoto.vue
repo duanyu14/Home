@@ -1,6 +1,6 @@
 <template>
   <div
-    class="hitokoto"
+    class="hitokoto cards"
     :class="{ mini }"
     @click="updateHitokoto"
   >
@@ -72,6 +72,7 @@ onMounted(() => {
   padding: 20px;
   animation: fade 0.5s;
   cursor: pointer;
+  border-radius: 6px;
 
   .content {
     height: 100%;
@@ -97,9 +98,12 @@ onMounted(() => {
   }
 }
 
-/* 新增的 mini 模式样式 */
+/* 新增的 mini 模式样式（下拉菜单和屏保中使用，无玻璃效果） */
 .hitokoto.mini {
   padding: 4px 12px;
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  border-radius: 0;
   .content .text {
     font-size: 0.9rem;
     -webkit-line-clamp: 1;
