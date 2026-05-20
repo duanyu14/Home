@@ -1,10 +1,13 @@
 <template>
-  <div class="weather" :class="{ mini }" v-if="weatherData.adCode.city && weatherData.weather.weather">
-    <span v-if="!mini">{{ weatherData.adCode.city }}&nbsp;</span>
-    <span>{{ weatherData.weather.weather }}&nbsp;</span>
-    <span>{{ weatherData.weather.temperature }}℃</span>
+  <div class="weather" :class="{ mini }" v-if="hasWeatherData">
+    <span>{{ store.weatherData.adCode.city }}&nbsp;</span>
+    <span>{{ store.weatherData.weather.weather }}&nbsp;</span>
+    <span>{{ store.weatherData.weather.temperature }}℃</span>
     <span v-if="!mini" class="sm-hidden">
-      &nbsp;{{ weatherData.weather.winddirection }}&nbsp;{{ weatherData.weather.windpower }}级
+      &nbsp;{{ store.weatherData.weather.winddirection }}&nbsp;{{ store.weatherData.weather.windpower }}级
+    </span>
+    <span v-if="mini" class="mini-wind">
+      &nbsp;{{ store.weatherData.weather.winddirection }} {{ store.weatherData.weather.windpower }}级
     </span>
   </div>
   <div class="weather" :class="{ mini }" v-else>
@@ -13,7 +16,9 @@
 </template>
 
 <script setup>
+import { computed, onMounted } from "vue";
 import { getAdcode, getWeather, getOtherWeather } from "@/api";
+import { mainStore } from "@/store";
 import { Error } from "@icon-park/vue-next";
 
 const props = defineProps({
@@ -23,27 +28,16 @@ const props = defineProps({
   }
 });
 
-// 高德开发者 Key
+const store = mainStore();
+
 const mainKey = import.meta.env.VITE_WEATHER_KEY;
 
-// 天气数据
-const weatherData = reactive({
-  adCode: {
-    city: null, // 城市
-    adcode: null, // 城市编码
-  },
-  weather: {
-    weather: null, // 天气现象
-    temperature: null, // 实时气温
-    winddirection: null, // 风向描述
-    windpower: null, // 风力级别
-  },
+const hasWeatherData = computed(() => {
+  return store.weatherData.adCode.city && store.weatherData.weather.weather;
 });
 
-// 取出天气平均值
 const getTemperature = (min, max) => {
   try {
-    // 计算平均值并四舍五入
     const average = (Number(min) + Number(max)) / 2;
     return Math.round(average);
   } catch (error) {
@@ -52,37 +46,41 @@ const getTemperature = (min, max) => {
   }
 };
 
-// 获取天气数据
 const getWeatherData = async () => {
   try {
-    // 获取地理位置信息
     if (!mainKey) {
       console.log("未配置，使用备用天气接口");
       const result = await getOtherWeather();
-      console.log(result);
       const data = result.result;
-      weatherData.adCode = {
-        city: data.city.City || "未知地区",
-        // adcode: data.city.cityId,
+      const weatherData = {
+        adCode: {
+          city: data.city.City || "未知地区",
+        },
+        weather: {
+          weather: data.condition.day_weather,
+          temperature: getTemperature(data.condition.min_degree, data.condition.max_degree),
+          winddirection: data.condition.day_wind_direction,
+          windpower: data.condition.day_wind_power,
+        },
       };
-      weatherData.weather = {
-        weather: data.condition.day_weather,
-        temperature: getTemperature(data.condition.min_degree, data.condition.max_degree),
-        winddirection: data.condition.day_wind_direction,
-        windpower: data.condition.day_wind_power,
-      };
+      store.setWeatherData(weatherData);
     } else {
-      // 获取 Adcode
       const adCode = await getAdcode(mainKey);
-      console.log(adCode);
       if (adCode.infocode !== "10000") {
         throw "地区查询失败";
       }
-      weatherData.adCode = {
-        city: adCode.city,
-        adcode: adCode.adcode,
+      const weatherData = {
+        adCode: {
+          city: adCode.city,
+          adcode: adCode.adcode,
+        },
+        weather: {
+          weather: null,
+          temperature: null,
+          winddirection: null,
+          windpower: null,
+        },
       };
-      // 获取天气信息
       const result = await getWeather(mainKey, weatherData.adCode.adcode);
       weatherData.weather = {
         weather: result.lives[0].weather,
@@ -90,6 +88,7 @@ const getWeatherData = async () => {
         winddirection: result.lives[0].winddirection,
         windpower: result.lives[0].windpower,
       };
+      store.setWeatherData(weatherData);
     }
   } catch (error) {
     console.error("天气信息获取失败:" + error);
@@ -97,7 +96,6 @@ const getWeatherData = async () => {
   }
 };
 
-// 报错信息
 const onError = (message) => {
   ElMessage({
     message,
@@ -110,23 +108,28 @@ const onError = (message) => {
 };
 
 onMounted(() => {
-  // 调用获取天气
-  getWeatherData();
+  if (!store.weatherLoaded) {
+    if (!store.getCachedWeather()) {
+      getWeatherData();
+    }
+  }
 });
 </script>
 
 <style lang="scss" scoped>
 .weather {
-  /* 原有的样式，如果原来有就保留，如果没有可以不加 */
   display: inline-block;
 }
 
-/* 新增的 mini 模式样式 */
 .weather.mini {
   display: inline-block;
   font-size: 0.9rem;
   span {
     white-space: nowrap;
+  }
+  .mini-wind {
+    font-size: 0.8rem;
+    opacity: 0.8;
   }
 }
 </style>

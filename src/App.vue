@@ -77,6 +77,7 @@ let idleTimer = null;
 const IDLE_TIMEOUT = 30 * 1000; // 30秒无操作触发
 let originalCoverType = null; // 保存进入屏保前的壁纸类型
 let originalBackgroundShow = false; // 保存进入屏保前的壁纸展示状态
+let middleClickProcessing = false; // 防止鼠标中键重复触发
 
 // 重置空闲计时器
 const resetIdleTimer = () => {
@@ -116,6 +117,13 @@ const onUserActivity = () => {
       store.coverType = originalCoverType;
       originalCoverType = null;
     }
+    // 退出屏保时回到主页状态（不恢复壁纸展示状态）
+    store.backgroundShow = false;
+    // 关闭盒子和设置面板，回到主页状态
+    store.boxOpenState = false;
+    store.setOpenState = false;
+    store.mobileOpenState = false;
+    store.mobileFuncState = false;
     // 退出后立即重置计时器
     resetIdleTimer();
   } else {
@@ -166,24 +174,10 @@ onMounted(() => {
     return false;
   };
 
-  // 鼠标中键事件（仅桌面端生效）
-  window.addEventListener("mousedown", (event) => {
-    // 只在桌面端（宽度 >= 720px）响应鼠标中键
-    if (event.button == 1 && store.innerWidth >= 720) {
-      store.backgroundShow = !store.backgroundShow;
-      ElMessage({
-        message: `已${store.backgroundShow ? "开启" : "退出"}壁纸展示状态`,
-        grouping: true,
-      });
-    }
-  });
-
-  // 键盘快捷键：Ctrl+Shift+S 切换屏保模式（用于调试）
-  window.addEventListener("keydown", (event) => {
-    console.log('按键测试:', event.ctrlKey, event.shiftKey, event.key);
+  // 键盘快捷键处理函数
+  const handleKeydownShortcut = (event) => {
     if (event.ctrlKey && event.shiftKey && event.key === "S") {
       event.preventDefault();
-      console.log('屏保快捷键触发！');
       screenSaverVisible.value = !screenSaverVisible.value;
       if (screenSaverVisible.value) {
         ElMessage({
@@ -198,7 +192,13 @@ onMounted(() => {
         });
       }
     }
-  });
+  };
+
+  // 鼠标中键事件（仅桌面端生效）
+  window.addEventListener("mousedown", handleMiddleClick);
+
+  // 键盘快捷键：Ctrl+Shift+S 切换屏保模式
+  window.addEventListener("keydown", handleKeydownShortcut);
 
   // 监听当前页面宽度
   getWidth();
@@ -223,9 +223,43 @@ onMounted(() => {
   console.info(`%c${title1} %c${title2} %c${content}`, styleTitle1, styleTitle2, styleContent);
 });
 
+// 鼠标中键事件处理函数（提取为命名函数以便清理）
+const handleMiddleClick = (event) => {
+  if (event.button == 1 && store.innerWidth > 1024) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (middleClickProcessing) return;
+    middleClickProcessing = true;
+    const isCurrentlyShowing = store.backgroundShow;
+    if (isCurrentlyShowing) {
+      store.backgroundShow = false;
+      ElMessage({
+        message: "已退出壁纸展示状态",
+        grouping: true,
+      });
+    } else {
+      store.menuOpenState = false;
+      store.backgroundShow = true;
+      ElMessage({
+        message: "已开启壁纸展示状态",
+        grouping: true,
+      });
+    }
+    setTimeout(() => {
+      middleClickProcessing = false;
+    }, 1000);
+  }
+};
+
 onBeforeUnmount(() => {
   window.removeEventListener("resize", getWidth);
   stopIdleDetection();
+  // 清理鼠标中键事件
+  window.removeEventListener("mousedown", handleMiddleClick);
+  // 清理快捷键事件
+  window.removeEventListener("keydown", handleKeydownShortcut);
+  // 清理右键屏蔽（虽然是赋值方式，但重置为默认行为）
+  document.oncontextmenu = null;
 });
 </script>
 

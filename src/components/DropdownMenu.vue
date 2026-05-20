@@ -1,46 +1,49 @@
 <template>
-  <div class="top-menu-container" v-show="!screenSaverVisible">
-    <!-- 箭头触发器：移动端始终显示，PC端靠近顶部时显示 -->
+  <!-- 背景模糊遮罩 -->
+  <Transition name="fade">
+    <div v-show="store.menuOpenState && !screenSaverVisible && !store.backgroundShow" class="menu-overlay" @click="closeMenu"></div>
+  </Transition>
+  <div class="top-menu-container" v-show="!screenSaverVisible && !store.backgroundShow">
     <div
       class="menu-trigger"
-      v-show="isMobile || arrowVisible || menuVisible"
+      v-show="isMobile || arrowVisible || store.menuOpenState"
       @click="toggleMenu"
-      :class="{ active: menuVisible }"
+      :class="{ active: store.menuOpenState }"
     >
-      <ArrowDown v-if="!menuVisible" theme="filled" size="24" fill="#ffffff" />
+      <ArrowDown v-if="!store.menuOpenState" theme="filled" size="24" fill="#ffffff" />
       <ArrowUp v-else theme="filled" size="24" fill="#ffffff" />
     </div>
-
-    <!-- 覆盖层菜单（全屏） -->
     <Transition name="slide-down">
-      <div v-show="menuVisible" class="menu-overlay" @click.self="closeMenu">
-        <div class="menu-content cards" @click.stop>
-          <!-- 移动端/平板端布局 -->
-          <div class="menu-mobile-layout">
-            <div class="mobile-time">
-              <span class="hour">{{ currentTime.hour }}:{{ currentTime.minute }}:{{ currentTime.second }}</span>
-              <span class="date">{{ currentTime.year }}-{{ currentTime.month }}-{{ currentTime.day }} {{ currentTime.weekday }}</span>
-            </div>
-            <div class="mobile-hitokoto">
-              <Hitokoto :mini="true" />
-            </div>
-            <div class="mobile-weather">
-              <Weather :mini="true" />
-            </div>
-            <div class="quick-links">
-              <a
-                v-for="item in topLinks"
-                :key="item.name"
-                :href="item.link"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Icon size="18">
-                  <component :is="siteIcon[item.icon]" />
-                </Icon>
-                <span>{{ item.name }}</span>
-              </a>
-            </div>
+      <div v-show="store.menuOpenState" class="menu-content cards" @click.stop>
+        <div class="menu-left">
+          <div class="time-row">
+            <span class="hour">{{ currentTime.hour }}:{{ currentTime.minute }}:{{ currentTime.second }}</span>
+          </div>
+          <div class="date-row">
+            <span>{{ currentTime.year }}-{{ currentTime.month }}-{{ currentTime.day }} {{ currentTime.weekday }}</span>
+          </div>
+          <div class="weather-row">
+            <Weather :mini="true" />
+          </div>
+        </div>
+        <div class="menu-center">
+          <Hitokoto :mini="true" />
+        </div>
+        <div class="menu-right">
+          <div class="quick-links">
+            <a
+              v-for="item in topLinks"
+              :key="item.name"
+              :href="item.link"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click.stop
+            >
+              <Icon size="18">
+                <component :is="siteIcon[item.icon]" />
+              </Icon>
+              <span>{{ item.name }}</span>
+            </a>
           </div>
         </div>
       </div>
@@ -57,6 +60,9 @@ import { Icon } from '@vicons/utils';
 import { ArrowDown, ArrowUp } from '@icon-park/vue-next';
 import { Blog, Cloud, CompactDisc, Compass, Book, Fire, LaptopCode } from '@vicons/fa';
 import siteLinks from '@/assets/siteLinks.json';
+import { mainStore } from '@/store';
+
+const store = mainStore();
 
 const props = defineProps({
   screenSaverVisible: {
@@ -65,61 +71,13 @@ const props = defineProps({
   }
 });
 
-const menuVisible = ref(false);
 const arrowVisible = ref(false);
 const currentTime = ref({});
 const isMobile = ref(false);
 let timeInterval = null;
 
-// 切换菜单显示
-const toggleMenu = (e) => {
-  e.stopPropagation();
-  menuVisible.value = !menuVisible.value;
-};
-
-// 关闭菜单
-const closeMenu = () => {
-  menuVisible.value = false;
-};
-
-// 点击外部关闭菜单（实际上由覆盖层处理，但为了安全也可保留）
-const handleClickOutside = (e) => {
-  if (menuVisible.value && !e.target.closest('.top-menu-container')) {
-    closeMenu();
-  }
-};
-
-// 监听鼠标移动，靠近顶部时显示箭头（仅PC）
-const handleMouseMove = (e) => {
-  if (!isMobile.value) {
-    const threshold = 50;
-    arrowVisible.value = e.clientY <= threshold;
-  } else {
-    arrowVisible.value = false;
-  }
-};
-
-// 按 ESC 键关闭菜单
-const handleKeyDown = (e) => {
-  if (e.key === 'Escape' && menuVisible.value) {
-    closeMenu();
-  }
-};
-
-// 更新时间
-const updateTime = () => {
-  currentTime.value = getCurrentTime();
-};
-
-// 检测屏幕宽度
-const checkMobile = () => {
-  isMobile.value = window.innerWidth <= 720;
-};
-
-// 取前4个站点作为快捷链接
 const topLinks = computed(() => siteLinks.slice(0, 4));
 
-// 图标映射
 const siteIcon = {
   Blog,
   Cloud,
@@ -128,6 +86,45 @@ const siteIcon = {
   Book,
   Fire,
   LaptopCode,
+};
+
+const toggleMenu = (e) => {
+  e.stopPropagation();
+  store.menuOpenState = !store.menuOpenState;
+};
+
+const closeMenu = () => {
+  store.menuOpenState = false;
+};
+
+const handleClickOutside = (e) => {
+  // 有遮罩层后，这个主要用于处理其他边缘情况
+  if (store.menuOpenState && !e.target.closest('.top-menu-container') && !e.target.classList.contains('menu-overlay')) {
+    closeMenu();
+  }
+};
+
+const handleMouseMove = (e) => {
+  if (!isMobile.value && !props.screenSaverVisible && !store.backgroundShow) {
+    const threshold = 50;
+    arrowVisible.value = e.clientY <= threshold;
+  } else {
+    arrowVisible.value = false;
+  }
+};
+
+const handleKeyDown = (e) => {
+  if (e.key === 'Escape' && store.menuOpenState) {
+    closeMenu();
+  }
+};
+
+const updateTime = () => {
+  currentTime.value = getCurrentTime();
+};
+
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 1024;
 };
 
 onMounted(() => {
@@ -150,6 +147,31 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="scss" scoped>
+// 背景模糊遮罩
+.menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 290;
+  pointer-events: auto;
+}
+
+// 过渡动画
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 .top-menu-container {
   position: fixed;
   top: 20px;
@@ -174,8 +196,6 @@ onBeforeUnmount(() => {
     cursor: pointer;
     transition: transform 0.3s, background 0.3s;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    opacity: 1;
-    visibility: visible;
 
     &:hover {
       transform: scale(1.1);
@@ -184,230 +204,172 @@ onBeforeUnmount(() => {
     &:active {
       transform: scale(0.95);
     }
+  }
+}
 
-    @media (max-width: 720px) {
-      width: 56px;
-      height: 56px;
+.menu-content {
+  pointer-events: auto;
+  margin-top: 10px;
+  width: 90%;
+  max-width: 1100px;
+  padding: 20px 28px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border-radius: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  color: #fff;
+
+  .menu-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .time-row {
+      .hour {
+        font-family: 'UnidreamLED', monospace;
+        font-size: 2rem;
+        font-weight: bold;
+      }
+    }
+
+    .date-row {
+      font-size: 1rem;
+      opacity: 0.85;
+    }
+
+    .weather-row {
+      font-size: 0.9rem;
+      margin-top: 4px;
     }
   }
 
-  /* 覆盖层样式 */
-  .menu-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(8px);
+  .menu-center {
+    flex: 2;
     display: flex;
-    align-items: center;
     justify-content: center;
-    pointer-events: auto;
-    z-index: 400; /* 高于箭头 */
 
-    .menu-content {
-      width: 90%;
-      max-width: 1000px;
-      padding: 40px;
-      background-color: rgba(0, 0, 0, 0.4);
-      backdrop-filter: blur(20px);
-      border-radius: 20px;
+    :deep(.hitokoto) {
+      text-align: center;
+      .content .text {
+        font-size: 1rem;
+        -webkit-line-clamp: 2;
+      }
+      .content .from {
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  .menu-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+
+    .quick-links {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 40px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      flex-direction: column;
+      gap: 10px;
 
-      .menu-left {
-        flex: 1;
+      a {
         display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
-
-      .menu-right {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 20px;
-
-        .time {
-          font-family: 'UnidreamLED', monospace;
-          text-align: right;
-
-          .hour {
-            font-size: 2rem;
-            display: block;
-          }
-
-          .date {
-            font-size: 0.9rem;
-            opacity: 0.8;
-            margin-top: 5px;
-          }
-        }
-
-        .quick-links {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 16px;
-          justify-content: flex-end;
-
-          a {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: #fff;
-            text-decoration: none;
-            font-size: 1rem;
-            padding: 8px 12px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 30px;
-            transition: 0.2s;
-
-            &:hover {
-              background: rgba(255, 255, 255, 0.2);
-              transform: scale(1.05);
-            }
-
-            .i-icon {
-              display: flex;
-            }
-          }
-        }
-      }
-
-      /* 移动端/平板端布局 */
-      .menu-mobile-layout {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
         align-items: center;
-        gap: 20px;
+        gap: 8px;
+        color: #fff;
+        text-decoration: none;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        transition: all 0.2s;
+        white-space: nowrap;
 
-        .mobile-time {
-          text-align: center;
-          font-family: 'UnidreamLED', monospace;
-
-          .hour {
-            font-size: 2.5rem;
-            display: block;
-          }
-
-          .date {
-            font-size: 1rem;
-            opacity: 0.8;
-            margin-top: 5px;
-          }
-        }
-
-        .mobile-hitokoto {
-          text-align: center;
-          font-size: 1rem;
-          opacity: 0.9;
-        }
-
-        .mobile-weather {
-          text-align: center;
-          font-size: 1rem;
-        }
-
-        .quick-links {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          justify-content: center;
-          margin-top: 10px;
-
-          a {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: #fff;
-            text-decoration: none;
-            font-size: 0.9rem;
-            padding: 6px 12px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 30px;
-            transition: 0.2s;
-
-            &:hover {
-              background: rgba(255, 255, 255, 0.2);
-              transform: scale(1.05);
-            }
-
-            .i-icon {
-              display: flex;
-            }
-          }
+        &:hover {
+          background: rgba(255, 255, 255, 0.2);
+          transform: scale(1.05);
         }
       }
+    }
+  }
 
-      /* 移动端适配（<= 720px） */
-      @media (max-width: 720px) {
-        padding: 25px 15px;
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
 
-        .menu-mobile-layout {
-          gap: 15px;
+    .menu-left,
+    .menu-center,
+    .menu-right {
+      width: 100%;
+      justify-content: center;
+      text-align: center;
+    }
 
-          .mobile-time {
-            .hour {
-              font-size: 2rem;
-            }
+    .menu-left {
+      align-items: center;
+      gap: 4px;
 
-            .date {
-              font-size: 0.9rem;
-            }
-          }
-
-          .mobile-hitokoto {
-            font-size: 0.95rem;
-          }
-
-          .mobile-weather {
-            font-size: 0.95rem;
-          }
-        }
+      .time-row .hour {
+        font-size: 1.3rem;
       }
 
-      /* 平板端适配（721px - 1024px） */
-      @media (min-width: 721px) and (max-width: 1024px) {
-        .menu-mobile-layout {
-          gap: 18px;
+      .date-row {
+        font-size: 0.85rem;
+      }
+    }
 
-          .mobile-time {
-            .hour {
-              font-size: 2.3rem;
-            }
+    .menu-right .quick-links {
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+  }
 
-            .date {
-              font-size: 0.95rem;
-            }
-          }
+  @media (max-width: 720px) {
+    padding: 16px 15px;
+    width: 95%;
+    border-radius: 20px;
 
-          .mobile-hitokoto {
-            font-size: 1rem;
-          }
+    .menu-left {
+      .time-row .hour {
+        font-size: 1.2rem;
+      }
 
-          .mobile-weather {
-            font-size: 1rem;
-          }
-        }
+      .date-row {
+        font-size: 0.8rem;
+      }
+    }
+
+    .menu-center :deep(.hitokoto) {
+      .content .text {
+        font-size: 0.9rem;
+      }
+    }
+
+    .menu-right .quick-links {
+      gap: 8px;
+
+      a {
+        font-size: 0.8rem;
+        padding: 5px 10px;
       }
     }
   }
 }
 
-/* 滑入动画 */
 .slide-down-enter-active,
 .slide-down-leave-active {
-  transition: all 0.4s ease;
+  transition: all 0.3s ease;
 }
+
 .slide-down-enter-from,
 .slide-down-leave-to {
   opacity: 0;
-  transform: translateY(-30px);
+  transform: translateY(-20px);
 }
 </style>

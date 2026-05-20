@@ -5,9 +5,9 @@
     @click="updateHitokoto"
   >
     <Transition name="el-fade-in-linear" mode="out-in">
-      <div :key="hitokotoData.text" class="content">
-        <span class="text">{{ hitokotoData.text }}</span>
-        <span v-if="!mini" class="from">-「&nbsp;{{ hitokotoData.from }}&nbsp;」</span>
+      <div :key="store.hitokotoData.text" class="content">
+        <span class="text">{{ store.hitokotoData.text }}</span>
+        <span class="from">-「&nbsp;{{ store.hitokotoData.from }}&nbsp;」</span>
       </div>
     </Transition>
   </div>
@@ -28,18 +28,13 @@ const props = defineProps({
 
 const store = mainStore();
 
-// 一言数据
-const hitokotoData = reactive({
-  text: "这里应该显示一句话",
-  from: "烟雨烟中客",
-});
-
-// 获取一言数据
 const getHitokotoData = async () => {
   try {
     const result = await getHitokoto();
-    hitokotoData.text = result.hitokoto;
-    hitokotoData.from = result.from;
+    store.setHitokotoData({
+      text: result.hitokoto,
+      from: result.from
+    });
   } catch (error) {
     ElMessage({
       message: "一言获取失败",
@@ -48,12 +43,13 @@ const getHitokotoData = async () => {
         fill: "#efefef",
       }),
     });
-    hitokotoData.text = "这里应该显示一句话";
-    hitokotoData.from = "烟雨烟中客";
+    store.setHitokotoData({
+      text: "这里应该显示一句话",
+      from: "烟雨烟中客"
+    });
   }
 };
 
-// 更新一言数据
 const updateHitokoto = () => {
   debounce(() => {
     getHitokotoData();
@@ -61,7 +57,9 @@ const updateHitokoto = () => {
 };
 
 onMounted(() => {
-  getHitokotoData();
+  if (!store.hitokotoLoaded) {
+    getHitokotoData();
+  }
 });
 </script>
 
@@ -98,15 +96,24 @@ onMounted(() => {
   }
 }
 
-/* 新增的 mini 模式样式（下拉菜单和屏保中使用，无玻璃效果） */
 .hitokoto.mini {
   padding: 4px 12px;
   background-color: transparent !important;
   backdrop-filter: none !important;
   border-radius: 0;
+  .content {
+    flex-direction: column;
+    align-items: center;
+  }
   .content .text {
     font-size: 0.9rem;
-    -webkit-line-clamp: 1;
+    -webkit-line-clamp: 2;
+  }
+  .content .from {
+    font-size: 0.8rem;
+    margin-top: 6px;
+    opacity: 0.8;
+    align-self: center;
   }
 }
 </style>
