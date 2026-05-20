@@ -133,7 +133,7 @@ const onUserActivity = () => {
 
 // 启动空闲检测
 const startIdleDetection = () => {
-  const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+  const events = ['mousemove', 'scroll', 'touchstart'];
   events.forEach(event => {
     window.addEventListener(event, onUserActivity);
   });
@@ -142,7 +142,7 @@ const startIdleDetection = () => {
 
 // 停止空闲检测
 const stopIdleDetection = () => {
-  const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+  const events = ['mousemove', 'scroll', 'touchstart'];
   events.forEach(event => {
     window.removeEventListener(event, onUserActivity);
   });
@@ -176,6 +176,11 @@ onMounted(() => {
 
   // 键盘快捷键处理函数
   const handleKeydownShortcut = (event) => {
+    // 任何按键都重置空闲计时器（除了在屏保状态）
+    if (!screenSaverVisible.value) {
+      resetIdleTimer();
+    }
+    // 处理 Ctrl+Shift+S 快捷键
     if (event.ctrlKey && event.shiftKey && event.key === "S") {
       event.preventDefault();
       screenSaverVisible.value = !screenSaverVisible.value;
@@ -228,6 +233,10 @@ const handleMiddleClick = (event) => {
   if (event.button == 1 && store.innerWidth > 1024) {
     event.preventDefault();
     event.stopPropagation();
+    // 重置空闲计时器
+    if (!screenSaverVisible.value) {
+      resetIdleTimer();
+    }
     if (middleClickProcessing) return;
     middleClickProcessing = true;
     const isCurrentlyShowing = store.backgroundShow;
